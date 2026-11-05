@@ -1,5 +1,5 @@
 # Beyond the 24-Hour Rhythm: Daily Activity Residuals Patterns and Mortality
-
+[![DOI](https://zenodo.org/badge/1214625248.svg)](https://doi.org/10.5281/zenodo.23991162)
 Compares one person's minute-level accelerometer data with fixed NHANES reference models.
 
 ## Run
