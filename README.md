@@ -26,6 +26,10 @@ shiny::runApp("Shiny_tool")
 
 Output is cohort-based context, not an individual diagnosis.
 
+# Draft Manuscript
+
+The repository contains analysis code implemented by the author using publicly available NHANES data. A research manuscript describing the methodology and findings is currently in preparation and has not yet undergone peer review.
+
 # Funding
 
 This project has received funding from the European Union’s Horizon Europe research and innovation programme under the Marie Skłodowska-Curie Actions grant agreement No. 101072993 (Project: LABDA).
