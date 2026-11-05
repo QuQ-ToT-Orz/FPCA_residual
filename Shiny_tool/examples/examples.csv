@@ -1,0 +1,8 @@
+"file","cohort","SEQN","cluster","age","gender","race","income"
+"hip-cluster-1.csv","count","25198",1,32.8333333333333,"Male","White","Middle"
+"hip-cluster-2.csv","count","21054",2,59.3333333333333,"Female","White","High"
+"hip-cluster-3.csv","count","40911",3,37.4166666666667,"Male","White","High"
+"wrist-cluster-1.csv","mims","68637",1,33,"Female","White","Low"
+"wrist-cluster-2.csv","mims","70848",2,80,"Male","Black","Low"
+"wrist-cluster-3.csv","mims","67952",3,65,"Female","Hispanic","Low"
+"wrist-cluster-4.csv","mims","63924",4,29,"Female","Black","Low"
