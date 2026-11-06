@@ -34,6 +34,14 @@ build_cohort <- function(dataset) {
     ext_log_beta = log(beta),
     ext_phase_sin = sin(2 * pi * acrotime / 1440), ext_phase_cos = cos(2 * pi * acrotime / 1440))
 
+  # Day-to-day timing irregularity: circular SD (hours) of the seven daily cosinor acrophases, sqrt(-2 log R)
+  load(paste0("./results/cosinor_analysis/", dataset, "/daily_cosinor_parameters_", suffix, ".RData"))
+  acro_sd <- daily_parameters$cosinor %>%
+    mutate(SEQN = as.character(SEQN), theta = 2 * pi * acrotime / 1440) %>%
+    group_by(SEQN) %>%
+    summarise(acro_csd_h = sqrt(-2 * log(sqrt(mean(cos(theta))^2 + mean(sin(theta))^2))) * 24 / (2 * pi), .groups = "drop")
+  rm(daily_parameters)
+
   load(paste0("./data/", dataset, "/Act_Analysis_asinh_", suffix, ".RData"))
   volume <- Act_Analysis_asinh %>%
     mutate(SEQN = as.character(SEQN)) %>%
@@ -58,6 +66,7 @@ build_cohort <- function(dataset) {
     left_join(data_analysis, by = "SEQN") %>%
     left_join(cosinor, by = "SEQN") %>%
     left_join(extended, by = "SEQN") %>%
+    left_join(acro_sd, by = "SEQN") %>%
     left_join(volume, by = "SEQN") %>%
     left_join(income, by = "SEQN") %>%
     left_join(scores, by = "SEQN")
@@ -71,6 +80,7 @@ build_cohort <- function(dataset) {
     cancer_death = as.integer(mortstat == 1 & cause %in% 2),
     # Per cohort SD
     MESOR_z = z(cosinor_mes), Amplitude_z = z(cosinor_amp),
+    acro_csd = z(log(acro_csd_h)),   # right-skewed, so log hours
     asinh_TAC = z(asinh(TAC)), MVPA_z = z(MVPA), wear_z = z(WT),
     across(paste0("FPC", 1:3), z))
 
@@ -108,7 +118,7 @@ corr_vars <- c("Age", "MESOR_z", "Amplitude_z",
                "cosinor_phase_sin", "cosinor_phase_cos", 
                "ext_minimum", "ext_amp", "ext_alpha", "ext_log_beta", "ext_phase_sin", "ext_phase_cos",
                paste0("FPC", 1:3),
-               "IS", "IV", "asinh_TAC", "MVPA_z", "wear_z")
+               "IS", "IV", "acro_csd", "asinh_TAC", "MVPA_z", "wear_z")
 corr <- lapply(cohorts, function(x) cor(x$d[corr_vars], method = "spearman", use = "pairwise.complete.obs"))
 high_corr <- bind_rows(lapply(names(corr), function(ds) {
   r <- corr[[ds]]

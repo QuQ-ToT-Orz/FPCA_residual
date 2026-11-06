@@ -19,7 +19,7 @@ methods <- c("unweighted", "weighted")
 cohort_label <- c(count = "Hip counts, 2003-2006", mims = "Wrist MIMS, 2011-2014", pooled = "Pooled (fixed effect)")
 
 ext_terms <- c("ext_minimum", "ext_alpha", "ext_log_beta")   # Extended cosinor beyond the ordinary cosinor
-rhythm_terms <- c("IS", "IV")
+rhythm_terms <- c("IS", "IV", "acro_csd")   # acro_csd: circular SD of the daily acrophases
 lifestyle_terms <- c("BMI", "SmokeCigs", "DrinkStatus", "EducationAdult", "MobilityProblem")
 disease_terms <- c("Diabetes", "CHF", "CHD", "Stroke",  "Cancer")
 
@@ -64,13 +64,13 @@ combined_terms <- c(ext_terms, rhythm_terms, "MobilityProblem")
 specs <- list(
   list(group = "Adjustment", label = "Model 1", terms = main_terms),
   list(group = "Adjustment", label = "+ extended cosinor", terms = c(main_terms, ext_terms)),
-  list(group = "Adjustment", label = "+ extended cosinor, IS and IV", terms = c(main_terms, ext_terms, rhythm_terms)),
+  list(group = "Adjustment", label = "+ extended cosinor, IS, IV and acrophase SD", terms = c(main_terms, ext_terms, rhythm_terms)),
   list(group = "Adjustment", label = "+ mobility", terms = c(main_terms, "MobilityProblem")),
   list(group = "Adjustment", label = "+ all above (Model 2)", terms = c(main_terms, combined_terms)),
   list(group = "Adjustment", label = "Model 2 + wear time", terms = c(main_terms, combined_terms, "wear_z")),
   # list(group = "Adjustment", label = "+ total activity", terms = c(main_terms, "asinh_TAC")),
   list(group = "Adjustment", label = "Model 2 + MVPA", terms = c(main_terms, combined_terms, "MVPA_z")),
-  list(group = "Adjustment", label = "Model 2 + BMI, smoking, alcohol, education)",
+  list(group = "Adjustment", label = "Model 2 + BMI, smoking, alcohol, education",
   terms = c(main_terms, combined_terms, lifestyle_terms)),
   list(group = "Adjustment", label = "Model 2 + all above", terms = c(main_terms, combined_terms, lifestyle_terms, "wear_z", "MVPA_z")),
   list(group = "Sensitivity", label = "Deaths in first 2 years excluded", terms = main_terms, early = TRUE))

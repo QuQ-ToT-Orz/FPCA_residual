@@ -53,11 +53,11 @@ print(level2_describe, row.names = FALSE)
 # Correlation of FPC2 with the level-2 summaries
 for (ds in names(cohorts)) {
   cat(ds, ": Spearman rho with FPC2\n")
-  print(round(cor(cohorts[[ds]]$d$FPC2, cohorts[[ds]]$d[, c(l2_sd_terms, "L2_total")], method = "spearman"), 2))
+  print(round(cor(cohorts[[ds]]$d$FPC2, cohorts[[ds]]$d[, c(l2_sd_terms, "L2_total", "acro_csd")], method = "spearman"), 2))
 }
 
 # Correlation of the Model 1 variables with the level-2 summaries
-corr_vars <- c(setdiff(main_terms, "Race"), l2_sd_terms, "L2_total")
+corr_vars <- c(setdiff(main_terms, "Race"), "IS", "IV", "acro_csd", l2_sd_terms, "L2_total")
 corr <- lapply(cohorts, function(x) {
   d <- x$d[corr_vars]
   d$Income[d$Income == "Missing"] <- NA
@@ -91,13 +91,13 @@ p_corr <- ggplot(corr_long, aes(var2, var1, fill = rho)) +
 p_corr
 
 ext_terms <- c("ext_minimum", "ext_alpha", "ext_log_beta")   # Extended cosinor beyond the ordinary cosinor
-rhythm_terms <- c("IS", "IV")
+rhythm_terms <- c("IS", "IV", "acro_csd")   # acro_csd: circular SD of the daily acrophases
 lifestyle_terms <- c("BMI", "SmokeCigs", "DrinkStatus", "EducationAdult", "MobilityProblem")
 combined_terms <- c(ext_terms, rhythm_terms, "MobilityProblem")
 specs <- list(
   list(group = "Adjustment", label = "Model 1", terms = main_terms),
   list(group = "Adjustment", label = "+ extended cosinor", terms = c(main_terms, ext_terms)),
-  list(group = "Adjustment", label = "+ extended cosinor, IS and IV", terms = c(main_terms, ext_terms, rhythm_terms)),
+  list(group = "Adjustment", label = "+ extended cosinor, IS, IV and acrophase SD", terms = c(main_terms, ext_terms, rhythm_terms)),
   list(group = "Adjustment", label = "+ mobility", terms = c(main_terms, "MobilityProblem")),
   list(group = "Adjustment", label = "+ all above (Model 2)", terms = c(main_terms, combined_terms)),
   list(group = "Adjustment", label = "Model 2 + wear time", terms = c(main_terms, combined_terms, "wear_z")),
