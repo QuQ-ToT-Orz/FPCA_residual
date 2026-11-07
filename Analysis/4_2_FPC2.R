@@ -72,18 +72,22 @@ save(cohorts, file = paste0(dir_path, "cohorts_weighted.RData"))
 #### 3 Survival models ####
 # Model 1: age, sex, race/ethnicity, income, cosinor MESOR, amplitude and acrophase (weekly fit), FPC1-FPC3, for all-cause, cardiovascular and cancer mortality (cause-specific: other deaths censored).
 # Testing hierarchy: the hip cohort (discovery) searches FPC1-FPC3 for all-cause mortality, with Benjamini-Hochberg q-values; the wrist cohort (validation) and cause-specific mortality test the component carried forward (FPC2) as a single test. FPC2 is then pooled across cohorts (descriptive).
-# Methods: unweighted (coxph) and survey-weighted (svycoxph with IPW weights, NHANES strata and PSUs).
+# Methods: svycoxph with NHANES strata and PSUs, unweighted (all weights 1) and survey-weighted (IPW weights).
 base_terms <- c("Age", "Gender", "Race", "Income", "MESOR_z", "Amplitude_z", "cosinor_phase_sin", "cosinor_phase_cos")
 fpc_terms <- c("FPC1", "FPC2", "FPC3")
 outcomes <- c(mortstat = "All-cause", cvd_death = "Cardiovascular", cancer_death = "Cancer")
 methods <- c("unweighted", "weighted")
 
-designs <- lapply(cohorts, function(x) svydesign(ids = ~SDMVPSU, strata = ~SDMVSTRA, weights = ~w_ipw, nest = TRUE, data = x$d))
+# Both methods use svycoxph with the NHANES strata and PSUs; unweighted = all weights 1 (design-based SEs)
+designs <- list(
+  unweighted = lapply(cohorts, function(x) svydesign(ids = ~SDMVPSU, strata = ~SDMVSTRA, weights = ~1, nest = TRUE, data = x$d)),
+  weighted = lapply(cohorts, function(x) svydesign(ids = ~SDMVPSU, strata = ~SDMVSTRA, weights = ~w_ipw, nest = TRUE, data = x$d)))
+cox_formula <- function(terms, event) as.formula(paste0("Surv(permth_exm / 12, ", event, ") ~ ", paste(terms, collapse = " + ")))
 cox <- function(d, terms, event, method, ds) {
-  f <- as.formula(paste0("Surv(permth_exm / 12, ", event, ") ~ ", paste(terms, collapse = " + ")))
-  if (method == "unweighted") return(coxph(f, data = d))
-  svycoxph(f, design = subset(designs[[ds]], SEQN %in% d$SEQN))
+  svycoxph(cox_formula(terms, event), design = subset(designs[[method]][[ds]], SEQN %in% d$SEQN))
 }
+# cox.zph is not valid on svycoxph fits, so the PH test uses an ordinary coxph fit (same coefficients as weight 1)
+ph_table <- function(d, terms, event) cox.zph(coxph(cox_formula(terms, event), data = d))$table
 estimate <- function(f, term) {
   b <- unname(coef(f)[term])
   se <- sqrt(unname(vcov(f)[term, term]))
@@ -97,7 +101,7 @@ for (ev in names(outcomes)) for (ds in names(cohorts)) for (m in methods) {
   d <- cohorts[[ds]]$d
   d <- d[complete.cases(d[, c("permth_exm", ev, terms)]), ]
   f <- cox(d, terms, ev, m, ds)
-  ph <- if (m == "unweighted") cox.zph(f)$table else NULL   # proportional hazards, unweighted fit
+  ph <- if (m == "unweighted") ph_table(d, terms, ev) else NULL   # proportional hazards, unweighted fit
   for (tm in c(fpc_terms, "MESOR_z", "Amplitude_z")) {
     k <- estimate(f, tm)
     results[[length(results) + 1]] <- data.frame(

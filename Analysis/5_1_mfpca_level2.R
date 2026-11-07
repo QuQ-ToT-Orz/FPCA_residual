@@ -112,13 +112,16 @@ all_terms <- unique(unlist(lapply(specs, `[[`, "terms")))
 level2_terms <- c(l2_sd_terms, "L2_total")
 
 #### 2 Model functions ####
-designs <- lapply(cohorts, function(x) svydesign(ids = ~SDMVPSU, strata = ~SDMVSTRA, weights = ~w_ipw,
-                                                 nest = TRUE, data = x$d))
+# Both methods use svycoxph with the NHANES strata and PSUs; unweighted = all weights 1 (design-based SEs)
+designs <- list(
+  unweighted = lapply(cohorts, function(x) svydesign(ids = ~SDMVPSU, strata = ~SDMVSTRA, weights = ~1, nest = TRUE, data = x$d)),
+  weighted = lapply(cohorts, function(x) svydesign(ids = ~SDMVPSU, strata = ~SDMVSTRA, weights = ~w_ipw, nest = TRUE, data = x$d)))
+cox_formula <- function(terms, event) as.formula(paste0("Surv(permth_exm / 12, ", event, ") ~ ", paste(terms, collapse = " + ")))
 cox <- function(d, terms, event, method, ds) {
-  f <- as.formula(paste0("Surv(permth_exm / 12, ", event, ") ~ ", paste(terms, collapse = " + ")))
-  if (method == "unweighted") return(coxph(f, data = d, ties = "efron"))
-  svycoxph(f, design = subset(designs[[ds]], SEQN %in% d$SEQN))
+  svycoxph(cox_formula(terms, event), design = subset(designs[[method]][[ds]], SEQN %in% d$SEQN))
 }
+# cox.zph is not valid on svycoxph fits, so the PH test uses an ordinary coxph fit (same coefficients as weight 1)
+ph_table <- function(d, terms, event) cox.zph(coxph(cox_formula(terms, event), data = d, ties = "efron"))$table
 estimate <- function(f, term) {
   b <- unname(coef(f)[term])
   se <- sqrt(unname(vcov(f)[term, term]))
@@ -142,7 +145,7 @@ for (ev in names(outcomes)) for (ds in names(cohorts)) {
           outcome = ev, dataset = ds, method = m, group = s$group, label = s$label, term = tm,
           n = nrow(dd), deaths = sum(dd[[ev]]),
           b = k[["b"]], se = k[["se"]], p = k[["p"]],
-          ph_p = if (m == "unweighted") cox.zph(f)$table[tm, "p"] else NA_real_) # proportional-hazards diagnostics
+          ph_p = if (m == "unweighted") ph_table(dd, s$terms, ev)[tm, "p"] else NA_real_) # proportional-hazards diagnostics
       }
     }
   }
