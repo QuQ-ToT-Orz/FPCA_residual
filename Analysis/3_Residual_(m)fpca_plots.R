@@ -14,6 +14,21 @@ suffix <- paste0(if (dataset == "mims") "new" else "old", out_suffix)
 unit <- if (dataset == "mims") "asinh(MIMS)" else "asinh(activity count)"
 dir_path <- paste0("./results/cosinor_residual_fpca/", dataset, "/")
 load(paste0(dir_path, "residual_fpca_", cosinor_fit, "_", suffix, ".RData"))
+# Align wrist component signs to the hip cohort
+# Level-1 MFPCA components were matched to the FPCA within cohort, so they get the same flip.
+if (dataset == "mims") {
+  hip <- new.env()
+  load(paste0("./results/cosinor_residual_fpca/count/residual_fpca_", cosinor_fit, "_old", out_suffix, ".RData"), envir = hip)
+  s <- sign(colSums(hip$fpca_fit$efunctions[, 1:3] * fpca_fit$efunctions[, 1:3]))
+  flip <- c(s, rep(1, ncol(fpca_fit$efunctions) - 3))
+  fpca_fit$efunctions <- sweep(fpca_fit$efunctions, 2, flip, "*")
+  fpca_fit$scores <- sweep(fpca_fit$scores, 2, flip, "*")
+  flip1 <- c(s, rep(1, ncol(mfpca_fit$efunctions$level1) - 3))
+  mfpca_fit$efunctions$level1 <- sweep(mfpca_fit$efunctions$level1, 2, flip1, "*")
+  mfpca_fit$scores$level1 <- sweep(mfpca_fit$scores$level1, 2, flip1, "*")
+  cat("Wrist components flipped to match hip:", which(s < 0), "\n")
+  rm(hip)
+}
 load(paste0("./data/", dataset, "/Act_Analysis_asinh_", suffix, ".RData"))
 Act_Analysis_asinh <- Act_Analysis_asinh %>% arrange(SEQN, WEEKDAY)
 observed <- as.matrix(Act_Analysis_asinh[, paste0("MIN", 1:1440)])

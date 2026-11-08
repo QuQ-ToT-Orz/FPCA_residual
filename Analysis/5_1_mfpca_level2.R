@@ -40,7 +40,16 @@ for (ds in names(cohorts)) {
   level2 <- data.frame(SEQN = rownames(sds), L2_SD1 = sds[, 1], L2_SD2 = sds[, 2], L2_SD3 = sds[, 3], L2_total = sqrt(rowSums(sds^2)))
   ev1 <- mfpca_fit$evalues$level1
   ev2 <- mfpca_fit$evalues$level2
-  level2_describe[[ds]] <- data.frame(dataset = ds, level2_components = ncol(S2), level1_share = sum(ev1) / (sum(ev1) + sum(ev2)), level2_comp1_3_share = sum(ev2[1:3]) / sum(ev2))
+  nf <- function(x) x / sqrt(sum(x^2))
+  phi1 <- mfpca_fit$efunctions$level1
+  l1_similarity <- sapply(1:3, function(k) abs(sum(nf(phi1[, k]) * nf(fpca_fit$efunctions[, k]))))
+  l1_score_cor <- sapply(1:3, function(k) {
+    s <- sign(sum(phi1[, k] * cohorts[[ds]]$efunctions[, k]))
+    cor(s * mfpca_fit$scores$level1[cohorts[[ds]]$d$SEQN, k], cohorts[[ds]]$d[[paste0("FPC", k)]])
+  })
+  level2_describe[[ds]] <- data.frame(dataset = ds, level2_components = ncol(S2), level1_share = sum(ev1) / (sum(ev1) + sum(ev2)), level2_comp1_3_share = sum(ev2[1:3]) / sum(ev2),
+    similarity_FPC1 = l1_similarity[1], similarity_FPC2 = l1_similarity[2], similarity_FPC3 = l1_similarity[3],
+    score_cor_FPC1 = l1_score_cor[1], score_cor_FPC2 = l1_score_cor[2], score_cor_FPC3 = l1_score_cor[3])
   # Per cohort SD
   cohorts[[ds]]$d <- cohorts[[ds]]$d %>%
     left_join(level2, by = "SEQN") %>%
@@ -50,6 +59,14 @@ for (ds in names(cohorts)) {
 }
 level2_describe <- bind_rows(level2_describe)
 print(level2_describe, row.names = FALSE)
+# dataset level2_components level1_share level2_comp1_3_share
+#    count                22    0.1201679            0.3643189
+#     mims                26    0.1485508            0.3102908
+# Level-1 vs single-level FPCA       FPC1   FPC2   FPC3
+#   count  eigenfunction similarity  0.996  0.983  0.982
+#          score correlation         0.944  0.907  0.905
+#   mims   eigenfunction similarity  0.999  0.998  0.990
+#          score correlation         0.959  0.936  0.909
 # Correlation of FPC2 with the level-2 summaries
 for (ds in names(cohorts)) {
   cat(ds, ": Spearman rho with FPC2\n")

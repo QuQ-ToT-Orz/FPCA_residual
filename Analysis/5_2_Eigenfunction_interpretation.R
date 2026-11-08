@@ -92,11 +92,52 @@ fpc2_groups <- bind_rows(lapply(names(cohorts), function(ds) {
     group_by(group) %>%
     summarise(n = n(), age = mean(Age), female_pct = 100 * mean(Gender == "Female"),
     mobility_pct = 100 * mean(MobilityProblem == "Any Difficulty"),
+    low_income_pct = 100 * mean(Income[Income != "Missing"] == "Low"),     # among participants reporting income
+    high_income_pct = 100 * mean(Income[Income != "Missing"] == "High"),
     activity_per_min = mean(TAC / 1440), mvpa_median = median(MVPA),
     mesor = mean(cosinor_mes), amplitude = mean(cosinor_amp),acrophase_median = clock(median(cosinor_acrotime)), IS = mean(IS), IV = mean(IV), died_pct = 100 * mean(mortstat), .groups = "drop") %>%
     mutate(dataset = ds, .before = 1)
 }))
 fpc2_groups %>% mutate(across(where(is.numeric), ~ signif(.x, 3)))
+
+# High vs low FPC2: Wilcoxon rank-sum test for variables summarised by medians (MVPA, acrophase),
+# Welch two-sample t-test otherwise (binary variables as means of 0/1 indicators)
+median_vars <- c("mvpa_median", "acrophase_median")
+binary_vars <- c("female_pct", "mobility_pct", "low_income_pct", "high_income_pct", "died_pct")
+group_vars <- c(age = "Age", female_pct = "female", mobility_pct = "mobility",
+                low_income_pct = "low_income", high_income_pct = "high_income", activity_per_min = "activity",
+                mvpa_median = "MVPA", mesor = "cosinor_mes", amplitude = "cosinor_amp",
+                acrophase_median = "cosinor_acrotime", IS = "IS", IV = "IV", died_pct = "mortstat")
+fpc2_tests <- bind_rows(lapply(names(cohorts), function(ds) {
+  d <- cohorts[[ds]]$d %>%
+    filter(FPC2 >= 1 | FPC2 <= -1) %>%
+    mutate(high = FPC2 >= 1, female = as.numeric(Gender == "Female"),
+           mobility = as.numeric(MobilityProblem == "Any Difficulty"), activity = TAC / 1440,
+           # income indicators are NA when income is missing, so tests use participants reporting income
+           low_income = ifelse(Income == "Missing", NA, as.numeric(Income == "Low")),
+           high_income = ifelse(Income == "Missing", NA, as.numeric(Income == "High")))
+  test <- function(v) {
+    x <- d[[group_vars[[v]]]]
+    if (v %in% median_vars) wilcox.test(x[d$high], x[!d$high])$p.value else t.test(x[d$high], x[!d$high])$p.value
+  }
+  # Age-adjusted: high vs low coefficient from median regression (median variables; bootstrap SE),
+  # logistic regression (binary) or linear regression (continuous), each with age as covariate
+  test_age <- function(v) {
+    if (v == "age") return(NA_real_)
+    f <- reformulate(c("high", "Age"), group_vars[[v]])
+    if (v %in% median_vars) {
+      set.seed(2024)
+      return(summary(quantreg::rq(f, tau = 0.5, data = d), se = "boot", R = 2000)$coef["highTRUE", 4])
+    }
+    fit <- if (v %in% binary_vars) glm(f, binomial, d) else lm(f, d)
+    summary(fit)$coef["highTRUE", 4]
+  }
+  data.frame(dataset = ds, variable = names(group_vars),
+             test = ifelse(names(group_vars) %in% median_vars, "Wilcoxon", "Welch t"),
+             p = sapply(names(group_vars), test),
+             p_age = sapply(names(group_vars), test_age))
+}))
+fpc2_tests %>% mutate(across(c(p, p_age), ~ signif(.x, 2))) %>% pivot_wider(names_from = dataset, values_from = c(p, p_age))
 
 #### 5 Save ####
 out_dir <- paste0(dir_path, "interpretation/")
@@ -104,3 +145,4 @@ dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 write.csv(table_demo, paste0(out_dir, "participant_characteristics.csv"), row.names = FALSE)
 write.csv(components, paste0(out_dir, "residual_components.csv"), row.names = FALSE)
 write.csv(fpc2_groups, paste0(out_dir, "fpc2_groups.csv"), row.names = FALSE)
+write.csv(fpc2_tests, paste0(out_dir, "fpc2_group_tests.csv"), row.names = FALSE)

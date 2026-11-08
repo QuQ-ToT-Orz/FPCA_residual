@@ -66,6 +66,17 @@ fpca_fit <- fpca.face(Y = subject_residual, argvals = time, pve = variance_targe
 flip <- sign(apply(fpca_fit$efunctions, 2, function(f) f[which.max(abs(f))]))
 fpca_fit$efunctions <- sweep(fpca_fit$efunctions, 2, flip, "*")
 fpca_fit$scores <- sweep(fpca_fit$scores, 2, flip, "*")
+# Wrist: align FPC1-FPC3 signs to the hip cohort so that a high score means the same pattern in both. Level-1 MFPCA components are matched to these below.
+if (dataset == "mims") {
+  hip <- new.env()
+  load(paste0("./results/cosinor_residual_fpca/count/residual_fpca_", cosinor_fit, "_old", out_suffix, ".RData"), envir = hip)
+  s <- sign(colSums(hip$fpca_fit$efunctions[, 1:3] * fpca_fit$efunctions[, 1:3]))
+  flip <- c(s, rep(1, ncol(fpca_fit$efunctions) - 3))
+  fpca_fit$efunctions <- sweep(fpca_fit$efunctions, 2, flip, "*")
+  fpca_fit$scores <- sweep(fpca_fit$scores, 2, flip, "*")
+  cat("Wrist components flipped to match hip:", which(s < 0), "\n")
+  rm(hip)
+}
 rownames(fpca_fit$scores) <- subject_id
 # fpca.face does not return its shrinkage, evalues / (evalues + sigma2). 
 # Each score is exactly shrinkage x projection
