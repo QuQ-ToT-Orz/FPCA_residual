@@ -21,7 +21,9 @@ cohort_label <- c(count = "Hip counts, 2003-2006", mims = "Wrist MIMS, 2011-2014
 ext_terms <- c("ext_minimum", "ext_alpha", "ext_log_beta")   # Extended cosinor beyond the ordinary cosinor
 rhythm_terms <- c("IS", "IV", "acro_csd")   # acro_csd: circular SD of the daily acrophases
 lifestyle_terms <- c("BMI", "SmokeCigs", "DrinkStatus", "EducationAdult", "MobilityProblem")
-disease_terms <- c("Diabetes", "CHF", "CHD", "Stroke",  "Cancer")
+disease_terms <- c("Diabetes", "CHF", "CHD", "Stroke",  "Cancer")   # Self-reported at baseline (DIQ010, MCQ160B/C/F, MCQ220)
+clinical_terms <- c("SYS", "LBXTC", "LBDHDD")   # Systolic BP, total and HDL cholesterol
+health_terms <- c(disease_terms, clinical_terms)
 
 #### 2 correlation ####
 # Spearman, with factors ranked by level order. Race is nominal, so it is left out; missing income is NA.
@@ -73,7 +75,8 @@ specs <- list(
   list(group = "Adjustment", label = "Model 2 + BMI, smoking, alcohol, education",
   terms = c(main_terms, combined_terms, lifestyle_terms)),
   list(group = "Adjustment", label = "Model 2 + all above", terms = c(main_terms, combined_terms, lifestyle_terms, "wear_z", "MVPA_z")),
-  list(group = "Sensitivity", label = "Deaths in first 2 years excluded", terms = main_terms, early = TRUE))
+  list(group = "Health status", label = "Model 1 +\nCHF, CHD, stroke, diabetes, cancer +,\nSBP, cholesterol (total, HDL)", terms = c(main_terms, health_terms)),
+  list(group = "Health status", label = "Model 2 +\nCHF, CHD, stroke, diabetes, cancer +,\nSBP, cholesterol (total, HDL)", terms = c(main_terms, combined_terms, health_terms)),  list(group = "Sensitivity", label = "Deaths in first 2 years excluded", terms = main_terms, early = TRUE))
 all_terms <- unique(unlist(lapply(specs, `[[`, "terms")))
 
 #### 2 Model functions ####
