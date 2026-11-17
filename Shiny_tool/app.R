@@ -4,7 +4,7 @@ source("helpers.R")
 
 reference <- readRDS("reference.rds")
 addResourcePath("logo", "logo")
-addResourcePath("paper", "paper")
+paper_url <- "https://www.medrxiv.org/content/10.64898/2026.11.10.26367785v1"
 hours <- (1:1440 - 1) / 60
 title <- "Beyond the 24-Hour Rhythm: Daily Activity Residuals Patterns and Mortality"
 minute_columns <- paste0("MIN", 1:1440)
@@ -36,7 +36,7 @@ ui <- fluidPage(
     "which typical activity group it is closest to, and their estimated risk of cardiovascular death. ",
     "The reference models are fixed: uploaded data do not change them."),
   p("Methods and results are described in the accompanying paper: ",
-    tags$a(href = "paper/paper.pdf", target = "_blank", "read the paper (PDF)"), "."),
+    tags$a(href = paper_url, target = "_blank", "read the preprint on medRxiv"), "."),
   tags$ol(
     tags$li("Choose the device that recorded the data."),
     tags$li("Upload the activity file."),
@@ -67,7 +67,10 @@ ui <- fluidPage(
       tags$li("The hazard ratio is from a survey-weighted Cox model that also adjusts for FPC1 and FPC3."),
       tags$li(sprintf("Activity groups are from k-means on FPC scores of average activity, with K chosen by the gap statistic. Average silhouette is %.2f (hip) and %.2f (wrist), below the 0.25 that indicates substantial structure, so groups are descriptive.",
                       reference$count$cluster$silhouette, reference$mims$cluster$silhouette)),
-      tags$li("Risk is from a survey-weighted logistic model with terms chosen by cross-validated AUC. The interval does not include error in the score or the term selection step.")))))
+      tags$li("Risk is from a survey-weighted logistic model with terms chosen by cross-validated AUC. The interval does not include error in the score or the term selection step.")))),
+  div(class = "logos",
+      tags$img(src = "logo/eu_marie_curie.png", alt = "EU Marie Curie"),
+      tags$img(src = "logo/logo%20labda%202023%20horizontal%20large.png", alt = "Labda")))
 
 server <- function(input, output, session) {
   activity <- reactive(read_table(req(input$activity_file)$datapath))
