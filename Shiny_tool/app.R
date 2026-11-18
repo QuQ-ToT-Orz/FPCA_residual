@@ -4,7 +4,7 @@ source("helpers.R")
 
 reference <- readRDS("reference.rds")
 addResourcePath("logo", "logo")
-paper_url <- "https://www.medrxiv.org/content/10.64898/2026.11.10.26367785v1"
+paper_url <- "https://www.medrxiv.org/content/10.64898/2026.11.10.26367785v2"
 hours <- (1:1440 - 1) / 60
 title <- "Beyond the 24-Hour Rhythm: Daily Activity Residuals Patterns and Mortality"
 minute_columns <- paste0("MIN", 1:1440)
