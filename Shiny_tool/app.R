@@ -29,18 +29,25 @@ ui <- fluidPage(
     .btn-primary { background: #9b4d2d; border-color: #9b4d2d; }
     .card table { font-size: 13px; }
     summary { display: list-item; cursor: pointer; font-weight: bold; }
-    .logos img { height: 40px; margin: 0 16px 16px 0; }")),
+    .intro { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
+    .logos { display: flex; align-items: center; gap: 16px; }
+    .logos img { height: 40px; }")),
   h2(title),
   p("This research tool compares one person's wearable activity data with a reference group of US adults aged 20 and older ",
     "from the National Health and Nutrition Examination Survey (NHANES). It shows how the person's daily activity pattern compares, ",
     "which typical activity group it is closest to, and their estimated risk of cardiovascular death. ",
     "The reference models are fixed: uploaded data do not change them."),
-  p("Methods and results are described in the accompanying paper: ",
-    tags$a(href = paper_url, target = "_blank", "read the preprint on medRxiv"), "."),
-  tags$ol(
-    tags$li("Choose the device that recorded the data."),
-    tags$li("Upload the activity file."),
-    tags$li("Enter the person's details and click Calculate.")),
+  div(class = "intro",
+    div(
+      p("Methods and results are described in the accompanying paper: ",
+        tags$a(href = paper_url, target = "_blank", "read the preprint on medRxiv"), "."),
+      tags$ol(
+        tags$li("Choose the device that recorded the data."),
+        tags$li("Upload the activity file."),
+        tags$li("Enter the person's details and click Calculate."))),
+    div(class = "logos",
+        tags$img(src = "logo/eu_marie_curie.png", alt = "EU Marie Curie"),
+        tags$img(src = "logo/logo%20labda%202023%20horizontal%20large.png", alt = "Labda"))),
   fluidRow(
     column(4, div(class = "card",
       selectInput("cohort", "Device and NHANES reference group", c(
@@ -58,19 +65,14 @@ ui <- fluidPage(
       tabsetPanel(
         tabPanel("Daily pattern", uiOutput("fpc2_text"), plotOutput("fpc2_plot", height = "380px")),
         tabPanel("Activity group", uiOutput("cluster_text"), plotOutput("cluster_plot", height = "340px"), tableOutput("cluster_table")),
-        tabPanel("Cardiovascular risk", uiOutput("mortality_text")))))),
-  div(class = "card", tags$details(
-    tags$summary("Technical details"),
-    tags$ul(
+        tabPanel("Cardiovascular risk", uiOutput("mortality_text")),
+        tabPanel("Technical details", tags$ul(style = "margin-top: 20px;",
       tags$li("Activity is asinh-transformed. A cosinor model gives the 24-hour rhythm: average level (MESOR), strength (amplitude) and peak time (acrophase)."),
       tags$li("The daily pattern score is the second functional principal component (FPC2) of participant-average cosinor residuals, in cohort SD units."),
-      tags$li("The hazard ratio is from a survey-weighted Cox model that also adjusts for FPC1 and FPC3."),
+      tags$li("The hazard ratio for cardiovascular death per SD of the score is from a Cox model weighted for the survey and for selection into the sample, adjusted for age, sex, ethnicity, income, the cosinor parameters, and FPC1 and FPC3."),
       tags$li(sprintf("Activity groups are from k-means on FPC scores of average activity, with K chosen by the gap statistic. Average silhouette is %.2f (hip) and %.2f (wrist), below the 0.25 that indicates substantial structure, so groups are descriptive.",
                       reference$count$cluster$silhouette, reference$mims$cluster$silhouette)),
-      tags$li("Risk is from a survey-weighted logistic model with terms chosen by cross-validated AUC. The interval does not include error in the score or the term selection step.")))),
-  div(class = "logos",
-      tags$img(src = "logo/eu_marie_curie.png", alt = "EU Marie Curie"),
-      tags$img(src = "logo/logo%20labda%202023%20horizontal%20large.png", alt = "Labda")))
+      tags$li("Risk is from a survey-weighted logistic model with terms chosen by cross-validated AUC. The interval does not include error in the score or the term selection step."))))))))
 
 server <- function(input, output, session) {
   activity <- reactive(read_table(req(input$activity_file)$datapath))
