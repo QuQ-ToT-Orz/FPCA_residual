@@ -95,7 +95,9 @@ fpc2_groups <- bind_rows(lapply(names(cohorts), function(ds) {
     low_income_pct = 100 * mean(Income[Income != "Missing"] == "Low"),     # among participants reporting income
     high_income_pct = 100 * mean(Income[Income != "Missing"] == "High"),
     activity_per_min = mean(TAC / 1440), mvpa_median = median(MVPA),
-    mesor = mean(cosinor_mes), amplitude = mean(cosinor_amp),acrophase_median = clock(median(cosinor_acrotime)), IS = mean(IS), IV = mean(IV), died_pct = 100 * mean(mortstat), .groups = "drop") %>%
+    mesor = mean(cosinor_mes), amplitude = mean(cosinor_amp), acrophase_median = clock(median(cosinor_acrotime)),
+    ext_minimum = mean(ext_minimum), ext_alpha = mean(ext_alpha), ext_log_beta = mean(ext_log_beta),   # extended cosinor
+    IS = mean(IS), IV = mean(IV), died_pct = 100 * mean(mortstat), .groups = "drop") %>%
     mutate(dataset = ds, .before = 1)
 }))
 fpc2_groups %>% mutate(across(where(is.numeric), ~ signif(.x, 3)))
@@ -107,7 +109,8 @@ binary_vars <- c("female_pct", "mobility_pct", "low_income_pct", "high_income_pc
 group_vars <- c(age = "Age", female_pct = "female", mobility_pct = "mobility",
                 low_income_pct = "low_income", high_income_pct = "high_income", activity_per_min = "activity",
                 mvpa_median = "MVPA", mesor = "cosinor_mes", amplitude = "cosinor_amp",
-                acrophase_median = "cosinor_acrotime", IS = "IS", IV = "IV", died_pct = "mortstat")
+                acrophase_median = "cosinor_acrotime", ext_minimum = "ext_minimum", ext_alpha = "ext_alpha",
+                ext_log_beta = "ext_log_beta", IS = "IS", IV = "IV", died_pct = "mortstat")
 fpc2_tests <- bind_rows(lapply(names(cohorts), function(ds) {
   d <- cohorts[[ds]]$d %>%
     filter(FPC2 >= 1 | FPC2 <= -1) %>%
@@ -127,7 +130,7 @@ fpc2_tests <- bind_rows(lapply(names(cohorts), function(ds) {
     f <- reformulate(c("high", "Age"), group_vars[[v]])
     if (v %in% median_vars) {
       set.seed(2024)
-      return(summary(quantreg::rq(f, tau = 0.5, data = d), se = "boot", R = 2000)$coef["highTRUE", 4])
+      return(summary(quantreg::rq(f, tau = 0.5, data = d, method = "fn"), se = "boot", R = 2000)$coef["highTRUE", 4])
     }
     fit <- if (v %in% binary_vars) glm(f, binomial, d) else lm(f, d)
     summary(fit)$coef["highTRUE", 4]
